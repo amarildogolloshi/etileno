@@ -224,7 +224,7 @@ class etileno_task(models.Model):
 
     @api.multi
     def run_task(self):
-        # TODO: add log / pk 
+        # TODO: add log / pk
         source = {}
         #data = {}
         fields = []
@@ -250,6 +250,34 @@ class etileno_task(models.Model):
 
                     for model, data in d.items():
                         self.env[model].create(data)
+            elif source.source_type == 'pymssql':
+                # get tables and fields
+                tables = {}
+                for action in actions:
+                    if not tables.has_key(action.table):
+                        tables[action.table.name] = []
+                    tables[action.table.name].append(action.field_id.name)
+
+                # connect with database
+                db = coredb.DB(source.source_type)
+                conn = db.connect(source.host, source.port, source.database, source.username, source.password)
+                if not conn:
+                    print 'ERROR'
+
+                # get rows from tables
+                for table, fields in tables.items():
+                    rows = db.get_rows(table=table, fields=fields)
+
+                    for row in rows:
+                        d = {}
+                        for action in actions:
+                            if not d.has_key(action.odoo_model.model):
+                                d[action.odoo_model.model] = {}
+                            d[action.odoo_model.model][action.odoo_field_id.name] = row[action.field_id.name]
+
+                        for model, data in d.items():
+                            print model, data
+                            self.env[model].create(data)
 
 
 

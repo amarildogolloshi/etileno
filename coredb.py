@@ -10,15 +10,15 @@ from messytables import CSVTableSet, type_guess, \
 
 engines = []
 modules = {
-    'psycopg2': {'port': 5432, 'name': 'Postgres SQL'},
-    'mysql': {'port': 3306, 'name': 'MySQL/MariaDB'},
-    'pymssql': {'port': 49426, 'name': 'SQL Server'},
-    'pymongo': {'port': 27017, 'name': 'MongoDB'},
-    'cx_Oracle': {'port': 1521, 'name': 'Oracle'},
-    'csv': {'port': None, 'name': 'CSV'},
-    'sqlite3': {'port': None, 'name': 'SQLite'},
-    'openpyxl': {'port': None, 'name': 'Excel (.xlsx)'},
-    'xlrd': {'port': None, 'name': 'Excel (.xls)'}
+    'psycopg2': {'port': 5432, 'name': 'Postgres SQL', 'type': 'SQL'},
+    'mysql': {'port': 3306, 'name': 'MySQL/MariaDB', 'type': 'SQL'},
+    'pymssql': {'port': 49426, 'name': 'SQL Server', 'type': 'SQL'},
+    'pymongo': {'port': 27017, 'name': 'MongoDB', 'type': 'NoSQL'},
+    'cx_Oracle': {'port': 1521, 'name': 'Oracle', 'type': 'SQL'},
+    'csv': {'port': None, 'name': 'CSV', 'type': 'file'},
+    'sqlite3': {'port': None, 'name': 'SQLite', 'type': 'file'},
+    'openpyxl': {'port': None, 'name': 'Excel (.xlsx)', 'type': 'file'},
+    'xlrd': {'port': None, 'name': 'Excel (.xls)', 'type': 'file'}
 }
 
 for k, v in modules.items():
@@ -31,10 +31,14 @@ for k, v in modules.items():
 engines = sorted(engines, key=lambda x: (x[1]))
 
 class DB():
+    """main class to connect and get data from DB sources"""
     def __init__(self, engine, data=None):
         self.engine = engine
         self.conn = None
-        self.data = base64.decodestring(data)
+        if data:
+            self.data = base64.decodestring(data)
+        else:
+            self.data = None
         # TODO: do connection here?
 
     def connect(self, host=None, port=None, database=None, username=None, password=None, file=None):
@@ -78,10 +82,15 @@ class DB():
 
         return self.conn
 
-    def get_rows(self, table=None):
+    def get_rows(self, table=None, fields=None):
         """get data by rows"""
         if self.engine == 'csv':
             return self.conn
+        elif self.engine == 'pymssql':
+            sql = "SELECT * FROM %s" % table
+            cur = self.conn.cursor()
+            cur.execute(sql)
+            return cur.fetchall()
 
 
     def show_tables(self):
