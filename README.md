@@ -1,2 +1,2 @@
-# etileno
+# ETiLeno
 ETL for Odoo
