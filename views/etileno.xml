@@ -1,0 +1,276 @@
+<openerp>
+<data>
+    <!-- BEGIN view source form -->
+    <record model="ir.ui.view" id="view_etileno_source_form">
+        <field name="name">etileno.source.form</field>
+        <field name="model">etileno.source</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+          <form string="Source">
+              <header>
+                  <button class="oe_highlight" name="verify_connection" type="object" string="Verify" attrs="{'invisible':[('state', '!=', 'draft')]}"/>
+                  <button class="oe_highlight" name="introspection" type="object" string="Instrospection" attrs="{'invisible':[('state', '!=', 'verified')]}"/>
+                  <field name="state" widget="statusbar" statusbar_visible="verified,instrospection,sync,done" />
+              </header>
+              <sheet>
+                  <group string='Source'>
+                    <field name="name"/>
+                    <field name="source_type"/>
+                  </group>
+                  <group string="Connection data" attrs="{'invisible':[('source_type', 'in', ['csv', 'sqlite3', 'xlrd', 'openpyxl'])]}">
+                      <field name="host"/>
+                      <field name="port"/>
+                      <field name="database"/>
+                      <field name="username"/>
+                      <field name="password"/>
+                  </group>
+                  <group string="Data" attrs="{'invisible':[('source_type', '!=', 'csv')]}">
+                      <field name="data"/>
+                  </group>
+              </sheet>
+          </form>
+      </field>
+    </record>
+    <!-- END view source form -->
+
+    <!-- BEGIN view source tree -->
+    <record model="ir.ui.view" id="view_etileno_source_tree">
+        <field name="name">etileno.source.tree</field>
+        <field name="model">etileno.source</field>
+        <field name="arch" type="xml">
+          <tree string="Sources">
+              <field name="name"/>
+              <field name="source_type"/>
+              <field name="host"/>
+              <field name="port"/>
+              <field name="database"/>
+              <field name="table_ids"/>
+              <field name="state"/>
+          </tree>
+      </field>
+    </record>
+    <!-- END view source tree -->
+
+    <!-- BEGIN view table tree -->
+    <record model="ir.ui.view" id="view_etileno_table_tree">
+        <field name="name">etileno.table.tree</field>
+        <field name="model">etileno.table</field>
+        <field name="arch" type="xml">
+          <tree string="Tables" default_order='rows desc'>
+              <field name="source_id"/>
+              <field name="source_type"/>
+              <field name="name"/>
+              <field name="field_ids"/>
+              <field name="rows"/>
+          </tree>
+      </field>
+    </record>
+    <!-- END view table tree -->
+
+    <!-- BEGIN view table search -->
+    <record id="etileno_table_search_view" model="ir.ui.view">
+        <field name="name">etileno.table.search</field>
+        <field name="model">etileno.table</field>
+        <field eval="10" name="priority"/>
+        <field name="arch" type="xml">
+            <search string="Table">
+                <field name="name"/>
+                <field name="source_id"/>
+                <field name="source_type"/>
+            </search>
+        </field>
+    </record>
+    <!-- END view table search -->
+
+    <!-- BEGIN view table form -->
+    <record model="ir.ui.view" id="view_etileno_table_form">
+        <field name="name">etileno.table.form</field>
+        <field name="model">etileno.table</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Table">
+                <header>
+                    <button class="oe_highlight" name="download_xlsx" type="object" string="Download"/>
+                </header>
+                <group>
+                    <field name="name"/>
+                    <field name="source_type"/>
+                    <field name="rows"/>
+                    <field name="info"/>
+                </group>
+                <notebook>
+                    <page string="Rows">
+                        <button class="oe_highlight" name="reload_page" type="object" string="Refresh"/>
+                        <field name="row_ids" readonly="1" options="{'reload_on_button': True}">
+                            <tree create="false" delete="false" editable="false">
+                                <field name="a" string="#a#"/>
+                                <field name="b" string="#b#"/>
+                                <field name="c" string="#c#"/>
+                                <field name="d" string="#d#"/>
+                                <field name="e" string="#e#"/>
+                                <field name="f" string="#f#"/>
+                                <field name="g" string="#g#"/>
+                                <field name="h" string="#h#"/>
+                                <field name="i" string="#i#"/>
+                                <field name="j" string="#j#"/>
+                            </tree>
+                        </field>
+                    </page>
+                    <page string="Fields">
+                        <field name="field_ids">
+                            <tree create="false" delete="false" editable="top">
+                                <field name='name'/>
+                                <field name='field_type'/>
+                                <field name='pk'/>
+                                <field name='visible'/>
+                            </tree>
+                      </field>
+                    </page>
+                </notebook>
+            </form>
+        </field>
+    </record>
+    <!-- END view table form -->
+
+    <!-- BEGIN view fields tree -->
+    <record model="ir.ui.view" id="view_etileno_field_tree">
+        <field name="name">etileno.field.tree</field>
+        <field name="model">etileno.field</field>
+        <field name="arch" type="xml">
+          <tree string="Fields">
+              <field name="name"/>
+              <field name="source"/>
+              <field name="table_id"/>
+              <field name="field_type"/>
+              <field name="pk"/>
+              <field name="fk_id"/>
+              <field name="fk_child_ids"/>
+          </tree>
+      </field>
+    </record>
+    <!-- END view fields tree -->
+
+    <!-- BEGIN view fields search -->
+    <record id="etileno_field_search_view" model="ir.ui.view">
+        <field name="name">etileno.field.search</field>
+        <field name="model">etileno.field</field>
+        <field eval="10" name="priority"/>
+        <field name="arch" type="xml">
+            <search string="Field">
+                <field name="name"/>
+                <field name="source"/>
+                <field name="table_id"/>
+                <field name="field_type"/>
+                <filter string="Primary Key" domain="[('pk', '>', 0)]" help="Is a Primary key"/>
+            </search>
+        </field>
+    </record>
+    <!-- END view fields search -->
+
+    <!-- BEGIN view fields form -->
+    <record model="ir.ui.view" id="view_etileno_field_form">
+        <field name="name">etileno.field.form</field>
+        <field name="model">etileno.field</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Fields" >
+                <group>
+                    <field name="name"/>
+                    <field name="source"/>
+                    <field name="table_id"/>
+                    <field name="field_type"/>
+                    <field name="visible"/>
+                    <field name="pk"/>
+                    <field name="fk_id"/>
+                    <field name="fk_child_ids" domain="[('source', '=', source)]">
+                        <field name="source"/>
+                        <field name="name"/>
+                        <field name="table"/>
+                        <field name="field_type"/>
+                    </field>
+                </group>
+            </form>
+        </field>
+    </record>
+    <!-- END view fields form -->
+
+    <!-- BEGIN view taks form -->
+    <record model="ir.ui.view" id="view_etileno_task_form">
+        <field name="name">etileno.task.form</field>
+        <field name="model">etileno.task</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <header>
+                <button class="oe_highlight" name="run_task" type="object" string="Run"/>
+            </header>
+            <form string="Task" >
+                <group>
+                    <field name="name"/>
+                </group>
+                <notebook>
+                    <page string="Actions">
+                        <field name="task_action_ids">
+                            <tree string="Actions" editable="bottom">
+                                <field name="order"/>
+                                <field name="source"/>
+                                <field name="table"/>
+                                <field name="field_id"/>
+                                <field name="odoo_model"/>
+                                <field name="odoo_field_id"/>
+                                <field name="action"/>
+                                <field name="transform"/>
+                            </tree>
+                        </field>
+                    </page>
+                </notebook>
+            </form>
+        </field>
+    </record>
+    <!-- END view taks form -->
+
+    <!-- BEGIN actions -->
+    <record model="ir.actions.act_window" id="action_list_sources">
+        <field name="name">Sources</field>
+        <field name="res_model">etileno.source</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_list_tables">
+        <field name="name">Tables</field>
+        <field name="res_model">etileno.table</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_list_fields">
+        <field name="name">Fields</field>
+        <field name="res_model">etileno.field</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record model="ir.actions.act_window" id="action_list_tasks">
+        <field name="name">Tasks</field>
+        <field name="res_model">etileno.task</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+    <!-- END actions -->
+
+    <!-- BEGIN menus -->
+    <menuitem id="etileno_main_menu" name="ETiLeno"/>
+
+    <menuitem id="etileno_external_data_menu" name="External Data" parent="etileno_main_menu"/>
+    <menuitem id="etileno_table_menu" parent="etileno_external_data_menu" name="Tables" sequence="10"
+              action="action_list_tables"/>
+    <menuitem id="etileno_field_menu" parent="etileno_external_data_menu" name="Fields" sequence="20"
+              action="action_list_fields"/>
+
+    <menuitem id="etileno_operations_menu" name="Operations" parent="etileno_main_menu"/>
+    <menuitem id="etileno_tasks_menu" parent="etileno_operations_menu" name="Tasks" sequence="30"
+              action="action_list_tasks"/>
+
+    <menuitem id="etileno_settings_menu" name="Settings" parent="etileno_main_menu"/>
+    <menuitem id="etileno_source_menu" parent="etileno_settings_menu" name="Sources" sequence="50"
+              action="action_list_sources"/>
+    <!-- END menus -->
+
+</data>
+</openerp>
