@@ -171,10 +171,6 @@ class DB():
             sql = """SELECT * FROM sys.objects"""
             cur.execute(sql)
             #print '>>>', sql
-            from pprint import pprint
-            for i in cur.fetchall():
-                print '+++', i['principal_id'], i['type'], i['type_desc'], i['name']
-            return {}
 
             for i in tables:
                 # get rows count

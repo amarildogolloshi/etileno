@@ -250,7 +250,7 @@ class etileno_task(models.Model):
 
                     for model, data in d.items():
                         self.env[model].create(data)
-            elif source.source_type == 'pymssql':
+            elif source.source_type in ['pymssql', 'psycopg2']:
                 # get tables and fields
                 tables = {}
                 for action in actions:
