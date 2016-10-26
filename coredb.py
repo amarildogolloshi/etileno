@@ -142,7 +142,7 @@ class DB():
 
                 # get foreign keys
                 sql = """
-                    SELECT c.constraint_name, tc.table_name, kcu.column_name,
+                    SELECT tc.constraint_name, tc.table_name, kcu.column_name,
                       ccu.table_name AS foreign_table_name,
                       ccu.column_name AS foreign_column_name
                     FROM information_schema.table_constraints AS tc
