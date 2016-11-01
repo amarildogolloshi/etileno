@@ -87,10 +87,20 @@ class DB():
         if self.engine == 'csv':
             return self.conn
         elif self.engine == 'pymssql':
-            sql = "SELECT * FROM %s" % table
+            sql = "SELECT %s FROM %s" % (','.join(fields), table)
             cur = self.conn.cursor()
             cur.execute(sql)
             return cur.fetchall()
+
+    def refresh(self, table=None):
+        """refresh number of rows"""
+        if self.engine == 'csv':
+            return len(self.conn)
+        elif self.engine == 'pymssql': #TODO: type SQL
+            sql = "SELECT count(*) as rows FROM %s" % table
+            cur = self.conn.cursor()
+            cur.execute(sql)
+            return cur.fetchone()['rows'] # only one row
 
 
     def show_tables(self):

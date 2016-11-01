@@ -10,6 +10,7 @@
               <header>
                   <button class="oe_highlight" name="verify_connection" type="object" string="Verify" attrs="{'invisible':[('state', '!=', 'draft')]}"/>
                   <button class="oe_highlight" name="introspection" type="object" string="Instrospection" attrs="{'invisible':[('state', '!=', 'verified')]}"/>
+                  <button class="oe_highlight" name="refresh" type="object" string="Refresh"/>
                   <field name="state" widget="statusbar" statusbar_visible="verified,instrospection,sync,done" />
               </header>
               <sheet>
@@ -206,18 +207,21 @@
             <form string="Task" >
                 <group>
                     <field name="name"/>
+                    <field name="table_id"/>
+                    <field name="odoo_model_id"/>
                 </group>
                 <notebook>
                     <page string="Actions">
-                        <field name="task_action_ids">
+                        <field name="task_action_ids" context="{'table_id': table_id, 'odoo_model_id': odoo_model_id}">
                             <tree string="Actions" editable="bottom">
                                 <field name="order"/>
                                 <field name="source"/>
                                 <field name="table"/>
-                                <field name="field_id"/>
+                                <field name="field_id" domain="[('table_id', '=', table_id)]"/>
                                 <field name="odoo_model"/>
-                                <field name="odoo_field_id"/>
+                                <field name="odoo_field_id" domain="[('model_id', '=', odoo_model_id)]"/>
                                 <field name="action"/>
+                                <field name="action_value"/>
                                 <field name="transform"/>
                             </tree>
                         </field>

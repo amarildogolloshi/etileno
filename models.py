@@ -18,7 +18,23 @@ class etileno_source(models.Model):
             self.state = 'verified'
 
     @api.one
+    def refresh(self):
+        db = coredb.DB(self.source_type, data=self.data)
+        conn = db.connect(self.host, self.port, self.database, self.username, self.password)
+        if not conn:
+            raise Exception("I can't connect with this source: %s" % self.name)
+        for table in self.table_ids:
+            print 'Refreshing %s...' % table.name
+            data = {
+                'rows': db.refresh(table.name)
+            }
+            print data
+            table.write(data)
+
+
+    @api.one
     def introspection(self):
+        """get structure from source and create tables and fields in etileno"""
         db = coredb.DB(self.source_type, data=self.data)
         conn = db.connect(self.host, self.port, self.database, self.username, self.password)
         tables = db.show_tables()
@@ -112,7 +128,6 @@ class etileno_table(models.Model):
     @api.model
     def fields_view_get(self, view_id=None, view_type='tree', context=None, toolbar=False, submenu=False):
         res = super(etileno_table, self).fields_view_get(view_id=view_id, view_type=view_type, context=self.env.context, toolbar=toolbar, submenu=submenu)
-        print '>>>', self.env.context
         if self.env.context.has_key('params'):
             params = self.env.context['params']
             if view_type == 'form' and params.get('view_type', None) == 'form' and params['model'] == 'etileno.table':
@@ -164,6 +179,7 @@ class etileno_table(models.Model):
     row_ids = fields.One2many('etileno.row', 'table_id', string='Rows', compute='_get_rows_related')
     model = fields.Many2one('ir.model') # default model to map
     info = fields.Text()
+    pks = fields.Char() # pk fields separeted by commas
 
 
 class etileno_field(models.Model):
@@ -184,21 +200,6 @@ class etileno_field(models.Model):
     fk_child_ids = fields.One2many('etileno.field', 'fk_id')
 
 
-class etileno_map(models.Model):
-    """map between external fields and odoo fields"""
-    _name = 'etileno.map'
-
-    #table_id = fields.Many2one('etileno.table')
-    field_id = fields.Many2one('etileno.field')
-    odoo_field_id = fields.Many2one('ir.models.field')
-    action_id = fields.Many2one('etileno.action')
-    constraint = fields.Boolean() # check value before create
-    transform = fields.Text() # python code to eval
-
-    def write(self):
-        pass
-
-
 class etileno_task_action(models.Model):
     # TODO: basic constaint - it need its own model
     # TODO: check for primary keys to create data
@@ -215,8 +216,21 @@ class etileno_task_action(models.Model):
         ('c', 'copy'),
         ('sr', 'search & replace'),
         ('r', 'replace'),
+        ('C', 'check'), # check if exist
+        ('R', 'related'), # get related value (use foreign keys)
+        ('pk', 'primary key'),
     ], default='c')
+    action_value = fields.Char() # until 126 bytes
     transform = fields.Text() # python code to eval (alpha)
+
+
+class etileno_task_log(models.Model):
+    """keep pk values from actions to track tasks"""
+    _name = 'etileno.task.log'
+
+    task_id = fields.Many2one('etileno.task')
+    table_row_pk = fields.Char()
+    model_row_pk = fields.Char()
 
 
 class etileno_task(models.Model):
@@ -254,7 +268,7 @@ class etileno_task(models.Model):
                 # get tables and fields
                 tables = {}
                 for action in actions:
-                    if not tables.has_key(action.table):
+                    if not tables.has_key(action.table.name):
                         tables[action.table.name] = []
                     tables[action.table.name].append(action.field_id.name)
 
@@ -266,23 +280,48 @@ class etileno_task(models.Model):
 
                 # get rows from tables
                 for table, fields in tables.items():
+                    #print table, fields
                     rows = db.get_rows(table=table, fields=fields)
 
                     for row in rows:
+                        #print row
                         d = {}
+                        create = True
                         for action in actions:
-                            if not d.has_key(action.odoo_model.model):
-                                d[action.odoo_model.model] = {}
-                            d[action.odoo_model.model][action.odoo_field_id.name] = row[action.field_id.name]
+                            # prepare data for create
+                            if action.action in ['c', 'cr']:
+                                if not d.has_key(action.odoo_model.model):
+                                    d[action.odoo_model.model] = {}
 
-                        for model, data in d.items():
-                            print model, data
-                            self.env[model].create(data)
+                            # checks
+                            if action.action == 'pk': # primary key
+                                field_pk = row[action.field_id.name]
+                            elif action.action == 'C': # check value
+                                print '>', row[action.field_id.name], action.action_value
+                                # TODO: cast action_value right
+                                if not row[action.field_id.name] == int(action.action_value):
+                                    create = False
+                            elif action.action == 'c': # create
+                                d[action.odoo_model.model][action.odoo_field_id.name] = row[action.field_id.name]
 
+                        print '+++', create, d
+                        # create register
+                        if create:
+                            for model, data in d.items():
+                                #print model, data
+                                pk_id = self.env[model].create(data)
+                                log_data = {
+                                    'task_id': self.id,
+                                    'table_row_pk': field_pk,
+                                    'model_row_pk': pk_id
+                                }
+                                self.env['etileno.task.log'].create(log_data)
 
 
     name = fields.Char()
     task_action_ids = fields.One2many('etileno.task.action', 'task_id')
+    table_id = fields.Many2one('etileno.table') # default table for actions
+    odoo_model_id = fields.Many2one('ir.model') # default model for actions
     constraint = fields.Char() # eval this to perform an action... (alpha)
 
 
