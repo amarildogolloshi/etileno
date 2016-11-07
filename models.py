@@ -171,15 +171,28 @@ class etileno_table(models.Model):
                     data[F[i]] = row[fields[i]]
                 self.row_ids |= self.env['etileno.row'].create(data)
 
+    @api.one
+    def _get_pks(self):
+        f = []
+        for field in self.field_ids:
+            if field.pk > 0:
+                f.append(field.name)
+        if f:
+            res = ','.join(f)
+            self.pks = len(res) < 24 and res or res[:24] + '...'
+        else:
+            self.pks = '' # empty
+
     source_id = fields.Many2one('etileno.source', 'Source')
     field_ids = fields.One2many('etileno.field', 'table_id', 'Fields')
+    translate_ids = fields.One2many('etileno.table.translate', 'table_id')
     source_type = fields.Selection(related='source_id.source_type', string='DB Type', store=True, readonly=True)
     name = fields.Char()
     rows = fields.Integer()
     row_ids = fields.One2many('etileno.row', 'table_id', string='Rows', compute='_get_rows_related')
     model = fields.Many2one('ir.model') # default model to map
     info = fields.Text()
-    pks = fields.Char() # pk fields separeted by commas
+    pks = fields.Char(compute='_get_pks') # pk fields separeted by commas
 
 
 class etileno_field(models.Model):
@@ -198,6 +211,8 @@ class etileno_field(models.Model):
     visible = fields.Boolean()
     fk_id = fields.Many2one('etileno.field')
     fk_child_ids = fields.One2many('etileno.field', 'fk_id')
+    fk_table_id = fields.Many2one('etileno.table')
+    fk_fields = fields.Char() # separated by commas fields
 
 
 class etileno_task_action(models.Model):
@@ -206,6 +221,7 @@ class etileno_task_action(models.Model):
     _name = 'etileno.task.action'
 
     order = fields.Integer()
+    translate_id = fields.Many2one('etileno.table.translate')
     task_id = fields.Many2one('etileno.task')
     source = fields.Many2one(related='field_id.source', readonly=True)
     table = fields.Many2one(related='field_id.table_id', readonly=True)
@@ -323,6 +339,76 @@ class etileno_task(models.Model):
     table_id = fields.Many2one('etileno.table') # default table for actions
     odoo_model_id = fields.Many2one('ir.model') # default model for actions
     constraint = fields.Char() # eval this to perform an action... (alpha)
+
+
+class etileno_table_translate(models.Model):
+    _name = 'etileno.table.translate'
+
+    @api.one
+    def search_match(self):
+        rows = {}
+
+        # get codes from source
+        db = coredb.DB(self.source.source_type, data=self.source.data)
+        conn = db.connect(self.source.host, self.source.port, self.source.database, self.source.username, self.source.password)
+        if not conn:
+            raise Exception("I can't connect with this source: %s" % self.name)
+        rows_source = db.get_rows(table=self.table_id.name, fields=self.table_id.pks.split(',') + [self.field_match_id.name])
+        for row in rows_source:
+            #print '>>', row
+            if rows.has_key(row[-1]) or row[-1] == None:
+                if self.test:
+                    raise Exception("Code repeated at source: %s with id %s" % (row[-1], ','.join(map(str, row[0:-1]))))
+                else:
+                    continue
+            rows[row[-1]] = { 'id_source': ','.join(map(str, row[0:-1])) }
+
+        # get codes from odoo
+        rows_odoo = self.env[self.odoo_match_id.model_id.model].search([])
+        for row in rows_odoo:
+            #if not rows.has_key(getattr(row, self.odoo_match_id.name)):
+            #    if self.test:
+            #        raise Exception("Code repeated at odoo: %s" % getattr(row, self.odoo_match_id.name))
+            #    else:
+            #        print 'continue'
+            #        continue
+            rows[getattr(row, self.odoo_match_id.name)]['id_odoo'] = str(row.id)
+
+        codes = dict([i.code, i] for i in self.code_ids)
+
+        for k, v in rows.items():
+            if not codes.has_key(k):
+                data = {
+                    'translate_id': self.id,
+                    'code': k,
+                    'id_source': v['id_source'],
+                    'id_odoo': v['id_odoo']
+                }
+                codes['k'] = self.env['etileno.table.translate.code'].create(data)
+
+
+    source = fields.Many2one(related='table_id.source_id')
+    action_ids = fields.One2many('etileno.task.action', 'translate_id')
+    code_ids = fields.One2many('etileno.table.translate.code', 'translate_id')
+    table_id = fields.Many2one('etileno.table')
+    field_match_id = fields.Many2one('etileno.field')
+    fields_complex = fields.Char()
+    odoo_model = fields.Many2one(related='odoo_match_id.model_id', readonly=True)
+    odoo_match_id = fields.Many2one('ir.model.fields') # default model for actions
+    translate_type = fields.Selection([
+        ('b', 'Basic (pks)')
+    ], default='b')
+    test = fields.Boolean()
+
+
+class etileno_table_translate_code(models.Model):
+    _name = 'etileno.table.translate.code'
+
+    translate_id = fields.Many2one('etileno.table.translate')
+    action_id = fields.Many2one('etileno.task.action')
+    id_source = fields.Char() # value fields separated by commas (if there are more pk)
+    code = fields.Char()
+    id_odoo = fields.Char() # integer (internal id)
 
 
 class etileno_row(models.TransientModel):

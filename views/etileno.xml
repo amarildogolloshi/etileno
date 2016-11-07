@@ -61,6 +61,7 @@
               <field name="source_id"/>
               <field name="source_type"/>
               <field name="name"/>
+              <field name="pks"/>
               <field name="field_ids"/>
               <field name="rows"/>
           </tree>
@@ -127,6 +128,19 @@
                             </tree>
                       </field>
                     </page>
+                    <page string="Translations">
+                        <field name="translate_ids" context="{'table': id}">>
+                            <tree editable="top">
+                                <field name="translate_type"/>
+                                <field name="field_match_id" domain="[('table_id', '=', table)]"/>
+                                <field name="fields_complex"/>
+                                <field name="odoo_model"/>
+                                <field name="odoo_match_id"/>
+                                <field name="test"/>
+                                <button name="search_match" type="object" string="Match!" class="oe_highlight"/>
+                            </tree>
+                        </field>
+                    </page>
                 </notebook>
             </form>
         </field>
@@ -146,6 +160,8 @@
               <field name="pk"/>
               <field name="fk_id"/>
               <field name="fk_child_ids"/>
+              <field name="fk_table_id"/>
+              <field name="fk_fields"/>
           </tree>
       </field>
     </record>
@@ -182,6 +198,8 @@
                     <field name="field_type"/>
                     <field name="visible"/>
                     <field name="pk"/>
+                    <field name="fk_table_id"/>
+                    <field name="fk_fields"/>
                     <field name="fk_id"/>
                     <field name="fk_child_ids" domain="[('source', '=', source)]">
                         <field name="source"/>
@@ -232,6 +250,21 @@
     </record>
     <!-- END view taks form -->
 
+    <!-- BEGIN view translations tree -->
+    <record model="ir.ui.view" id="view_etileno_translate_tree">
+        <field name="name">etileno.table.translate.tree</field>
+        <field name="model">etileno.table.translate</field>
+        <field name="arch" type="xml">
+            <tree string="Fields">
+              <field name="table_id"/>
+              <field name="translate_type"/>
+              <field name="field_match_id"/>
+              <field name="odoo_match_id"/>
+          </tree>
+      </field>
+    </record>
+    <!-- END view translations tree -->
+
     <!-- BEGIN actions -->
     <record model="ir.actions.act_window" id="action_list_sources">
         <field name="name">Sources</field>
@@ -256,6 +289,12 @@
         <field name="res_model">etileno.task</field>
         <field name="view_mode">tree,form</field>
     </record>
+
+    <record model="ir.actions.act_window" id="action_list_translations">
+        <field name="name">Translations</field>
+        <field name="res_model">etileno.table.translate</field>
+        <field name="view_mode">tree,form</field>
+    </record>
     <!-- END actions -->
 
     <!-- BEGIN menus -->
@@ -270,6 +309,8 @@
     <menuitem id="etileno_operations_menu" name="Operations" parent="etileno_main_menu"/>
     <menuitem id="etileno_tasks_menu" parent="etileno_operations_menu" name="Tasks" sequence="30"
               action="action_list_tasks"/>
+    <menuitem id="etileno_translations_menu" parent="etileno_operations_menu" name="Traslations" sequence="40"
+              action="action_list_translations"/>
 
     <menuitem id="etileno_settings_menu" name="Settings" parent="etileno_main_menu"/>
     <menuitem id="etileno_source_menu" parent="etileno_settings_menu" name="Sources" sequence="50"

@@ -10,11 +10,11 @@ from messytables import CSVTableSet, type_guess, \
 
 engines = []
 modules = {
-    'psycopg2': {'port': 5432, 'name': 'Postgres SQL', 'type': 'SQL'},
-    'mysql': {'port': 3306, 'name': 'MySQL/MariaDB', 'type': 'SQL'},
-    'pymssql': {'port': 49426, 'name': 'SQL Server', 'type': 'SQL'},
-    'pymongo': {'port': 27017, 'name': 'MongoDB', 'type': 'NoSQL'},
-    'cx_Oracle': {'port': 1521, 'name': 'Oracle', 'type': 'SQL'},
+    'psycopg2': {'port': 5432, 'name': 'Postgres SQL', 'type': 'sql'},
+    'mysql': {'port': 3306, 'name': 'MySQL/MariaDB', 'type': 'sql'},
+    'pymssql': {'port': 49426, 'name': 'SQL Server', 'type': 'sql'},
+    'pymongo': {'port': 27017, 'name': 'MongoDB', 'type': 'sql'},
+    'cx_Oracle': {'port': 1521, 'name': 'Oracle', 'type': 'sql'},
     'csv': {'port': None, 'name': 'CSV', 'type': 'file'},
     'sqlite3': {'port': None, 'name': 'SQLite', 'type': 'file'},
     'openpyxl': {'port': None, 'name': 'Excel (.xlsx)', 'type': 'file'},
@@ -84,11 +84,15 @@ class DB():
 
     def get_rows(self, table=None, fields=None):
         """get data by rows"""
+        print 'get_rows', table, fields
         if self.engine == 'csv':
             return self.conn
-        elif self.engine == 'pymssql':
-            sql = "SELECT %s FROM %s" % (','.join(fields), table)
-            cur = self.conn.cursor()
+        elif self.engine in ['pymssql', 'psycopg2']:
+            if self.engine == 'psycopg2':
+                cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            else:
+                cur = cur = self.conn.cursor()
+            sql = "SELECT %s FROM %s" % (','.join(fields) or '*', table)
             cur.execute(sql)
             return cur.fetchall()
 
@@ -96,9 +100,12 @@ class DB():
         """refresh number of rows"""
         if self.engine == 'csv':
             return len(self.conn)
-        elif self.engine == 'pymssql': #TODO: type SQL
+        elif self.engine in ['pymssql', 'psycopg2']: #TODO: type SQL
+            if self.engine == 'psycopg2':
+                cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            else:
+                cur = cur = self.conn.cursor()
             sql = "SELECT count(*) as rows FROM %s" % table
-            cur = self.conn.cursor()
             cur.execute(sql)
             return cur.fetchone()['rows'] # only one row
 
@@ -223,10 +230,15 @@ class DB():
     def get_data(self, table, fields, limit=500):
         """Return rows for 'table' with 'fields'"""
         res = {}
-        cur = self.conn.cursor()
 
-        if self.engine == 'pymssql':
-            sql = "SELECT TOP %i %s from %s" % (limit, ','.join(fields), table)
+        if self.engine in ['pymssql', 'psycopg2']:
+            if self.engine == 'psycopg2':
+                cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+                sql = "SELECT %s from %s LIMIT %i" % (','.join(fields), table, limit)
+            else:
+                cur = cur = self.conn.cursor()
+                sql = "SELECT TOP %i %s from %s" % (limit, ','.join(fields), table)
+
             cur.execute(sql)
             res = cur.fetchall()
 
